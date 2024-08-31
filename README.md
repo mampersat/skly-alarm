@@ -1,4 +1,4 @@
-# skly-alarm
+# sky-alarm
 
 Create a device as described in https://xkcd.com/2979/
 
