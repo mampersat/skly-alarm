@@ -1,18 +1,33 @@
 import requests
 
-# Check for northen lights
-response = requests.get("https://api.auroras.live/v1/?type=all&lat=65.0&long=25.0&forecast=false")
+# lat/lon of KBTV
+lat = 44.4689
+long = -73.1502
 
-# Check for ISS
-response = requests.get("http://api.open-notify.org/iss-now.json")
+def aurora():
+    # Check for northen lights
+    # http://auroraslive.io/#/api/v1/all
+    response = requests.get(f"https://api.auroras.live/v1/?type=all&lat={lat}&long={long}&forecast=false&threeday=false")
+    pobability = response.json()['probability']['value']
 
-# Check for sunrise and sunset
-response = requests.get("https://api.sunrise-sunset.org/json?lat=65.0&lng=25.0&date=today")
+    print(f"Probability of northern lights: {pobability}")
+    if pobability > 0.5:
+        return True
 
-# Check for meteors
-response = requests.get("https://api.nasa.gov/neo/rest/v1/feed?start_date=2018-10-10&end_date=2018-10-10&api_key=DEMO")
+def iss():
+    # Check for ISS
+    response = requests.get("http://api.open-notify.org/iss-now.json")
 
-# Check for rocket launches
-response = requests.get("https://launchlibrary.net/1.4/launch/next/5")
+def sun():
+    # Check for sunrise and sunset
+    response = requests.get("https://api.sunrise-sunset.org/json?lat=65.0&lng=25.0&date=today")
 
+def meteors():
+    # Check for meteors
+    response = requests.get("https://api.nasa.gov/neo/rest/v1/feed?start_date=2018-10-10&end_date=2018-10-10&api_key=DEMO")
 
+def launches():
+    # Check for rocket launches
+    response = requests.get("https://launchlibrary.net/1.4/launch/next/5")
+
+aurora()
