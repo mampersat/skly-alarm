@@ -10,6 +10,3 @@ Create a device as described in https://xkcd.com/2979/
 
 ## Hardware
 * [Raspberry PI picoPI](https://www.raspberrypi.com/products/raspberry-pi-pico/)
-embed image in README
-
-
