@@ -66,8 +66,13 @@ def aurora():
     print('Checking for aurora')
     show_checking(1)
 
-    # http://auroraslive.io/#/api/v1/all
-    response = requests.get(f"https://api.auroras.live/v1/?type=all&lat={lat}&long={lon}&forecast=false&threeday=false")
+    try:
+        response = requests.get(f"https://api.auroras.live/v1/?type=all&lat={lat}&long={lon}&forecast=false&threeday=false")    
+    except: 
+        print('Failed to get aurora data')
+        show_warning(1)
+        return
+    
     pobability = response.json()['probability']['value']
 
     print(f"Probability of northern lights: {pobability}")
