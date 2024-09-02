@@ -153,13 +153,24 @@ def sleep():
     # Pulse light[0] to indicate sleep
     if sys.platform != 'rp2':
         return
-    for i in range(60): # sleep 60 seconds
+    
+    for i in range(60):  # sleep 60 seconds
+        # Calculate the on_duration using a quadratic function for rapid speed-up
+        on_duration = 1.5 - (1.5 / 3600) * (i ** 2)
+        off_duration = on_duration / 2  # Adjust off duration to match the speed-up
+        
+        # Turn on the light
         np[0] = (0, 10, 0)
         np.write()
-        time.sleep(0.5)
+        time.sleep(on_duration)
+        
+        # Turn off the light
         np[0] = (0, 0, 0)
         np.write()
-        time.sleep(0.5)
+        time.sleep(off_duration)
+
+    np[0] = (0, 10, 0)
+    np.write()
 
 # Main loop
 
