@@ -34,6 +34,12 @@ def show_alert(position):
     np[position] = (40, 0, 0)
     np.write()
 
+def show_warning(position):
+    if sys.platform != 'rp2':
+        return
+    np[position] = (20, 20, 0)
+    np.write()
+
 def get_location():
     # Get location from IP
     global lat, lon, tzid, local_time
@@ -102,17 +108,26 @@ def sun():
     print('Checking for sunrise and sunset')
     show_checking(3)
 
-    request = f"https://api.sunrise-sunset.org/json?lat={lat}&lng={lon}&date=today&tzid={tzid}"
-    print(request)
+    try:
+        response = requests.get(f"https://api.sunrise-sunset.org/json?lat={lat}&lng={lon}&date=today&tzid={tzid}")
+        print(request)
 
-    response = requests.get(request)
-    sunrise = response.json()['results']['sunrise']
-    sunset = response.json()['results']['sunset']
+        response = requests.get(request)
+        sunrise = response.json()['results']['sunrise']
+        sunset = response.json()['results']['sunset']
 
-    print(f"Sunrise: {sunrise}")
-    print(f"Sunset: {sunset}")
+        print(f"Sunrise: {sunrise}")
+        print(f"Sunset: {sunset}")
 
-    show_checked(3)
+        sunset_window = 30 # minutes
+        if local_time > sunset - sunset_window:
+            show_alert(3)
+            return
+        
+        show_checked(3)
+    except:
+        print('Failed to get sunrise and sunset')
+        show_warning(3)
 
 def meteors():
     # Check for meteors
@@ -134,6 +149,18 @@ def airplanes():
     response = requests.get("https://opensky-network.org/api/states/all")
 
 
+def sleep():
+    # Pulse light[0] to indicate sleep
+    if sys.platform != 'rp2':
+        return
+    for i in range(60): # sleep 60 seconds
+        np[0] = (0, 10, 0)
+        np.write()
+        time.sleep(0.5)
+        np[0] = (0, 0, 0)
+        np.write()
+        time.sleep(0.5)
+
 # Main loop
 
 print('Checking for cool things in the sky')
@@ -150,4 +177,4 @@ while True:
     # airplanes()
 
     print('sleeping')
-    time.sleep(60)
+    sleep()
