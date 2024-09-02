@@ -1,5 +1,6 @@
 import requests
 import time
+import random
 
 import sys
 if sys.platform == 'rp2':
@@ -87,10 +88,16 @@ def iss():
     print('Checking for ISS')
     show_checking(2)
 
-    response = requests.get("http://api.open-notify.org/iss-now.json")
+    try:
+        response = requests.get("http://api.open-notify.org/iss-now.json")
+    except:
+        print('Failed to get ISS location')
+        show_warning(2)
+        return
+
     iss_lat = float(response.json()['iss_position']['latitude'])
     iss_lon = float(response.json()['iss_position']['longitude'])
-    
+
     # check if ISS is overhead
     range = 10
     if iss_lat - range < lat < iss_lat + range and iss_lon - range < lon < iss_lon + range:
@@ -159,7 +166,6 @@ def sleep():
         on_duration = 1.5 - (1.5 / 3600) * (i ** 2)
         off_duration = on_duration / 2  # Adjust off duration to match the speed-up
         
-        # Turn on the light
         np[0] = (0, 10, 0)
         np.write()
         time.sleep(on_duration)
