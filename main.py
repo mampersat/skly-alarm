@@ -1,13 +1,43 @@
 import requests
+import time
 
-# lat/lon of KBTV
+import sys
+if sys.platform == 'rp2':
+    import wifi
+    from lights import np # TODO maybe remove - this doesn't really do much
+else:
+    np = [None] * 10
+
+# Location and time information
+# Get's overwritten by get_location()
 lat = 44.4689
 lon = -73.1502
 tzid = "America/New_York"
+        
+local_time = "2021-10-10T10:10:10"
+
+def show_checking(position):
+    if sys.platform != 'rp2':
+        return
+    np[position] = (0, 0, 10)
+    np.write()
+
+def show_checked(position):
+    if sys.platform != 'rp2':
+        return
+    np[position] = (0, 10, 0)
+    np.write()  
+
+def show_alert(position):
+    if sys.platform != 'rp2':
+        return
+    np[position] = (40, 0, 0)
+    np.write()
 
 def get_location():
     # Get location from IP
-    global lat, lon, tzid
+    global lat, lon, tzid, local_time
+    show_checking(0)
 
     response = requests.get("https://ipinfo.io")
     location = response.json()
@@ -18,21 +48,28 @@ def get_location():
 
     # get current time
     response = requests.get(f"https://worldtimeapi.org/api/timezone/{tzid}")
-    time = response.json()    
-    print(f"time: {time['datetime']}")
+    local_time = response.json()    
+    print(f"time: {local_time['datetime']}")
             
+    show_checked(0)
     return True
 
 def aurora():
     # Check for northen lights
+    
+    print('Checking for aurora')
+    show_checking(1)
+
     # http://auroraslive.io/#/api/v1/all
     response = requests.get(f"https://api.auroras.live/v1/?type=all&lat={lat}&long={lon}&forecast=false&threeday=false")
     pobability = response.json()['probability']['value']
 
     print(f"Probability of northern lights: {pobability}")
     if pobability > 0.5:
+        show_alert(1)
         return True
-    
+
+    show_checked(1)    
     return False
 
 def iss():
@@ -40,6 +77,10 @@ def iss():
     # http://api.open-notify.org/
     # This API returns the current latitude and longitude of the International Space Station
     # Might need to calculate elevation as it might only be visible shorlty after sunset or before sunrise
+    
+    print('Checking for ISS')
+    show_checking(2)
+
     response = requests.get("http://api.open-notify.org/iss-now.json")
     iss_lat = float(response.json()['iss_position']['latitude'])
     iss_lon = float(response.json()['iss_position']['longitude'])
@@ -47,9 +88,10 @@ def iss():
     # check if ISS is overhead
     range = 10
     if iss_lat - range < lat < iss_lat + range and iss_lon - range < lon < iss_lon + range:
-        print('ISS is overhead')
+        show_alert(2)
         return True
     
+    show_checked(2)
     print('ISS is not overhead')
 
 
@@ -57,6 +99,9 @@ def sun():
     # Check for sunrise and sunset
     # Should cache this to 24hrs
     # More interesting if we can check atmospheric conditions like haze and cloud cover, aka "Pretty Sunsets"
+    print('Checking for sunrise and sunset')
+    show_checking(3)
+
     request = f"https://api.sunrise-sunset.org/json?lat={lat}&lng={lon}&date=today&tzid={tzid}"
     print(request)
 
@@ -66,6 +111,8 @@ def sun():
 
     print(f"Sunrise: {sunrise}")
     print(f"Sunset: {sunset}")
+
+    show_checked(3)
 
 def meteors():
     # Check for meteors
@@ -87,9 +134,13 @@ def airplanes():
     response = requests.get("https://opensky-network.org/api/states/all")
 
 
-def main():
-    print('Checking for cool things in the sky')
-    get_location()
+# Main loop
+
+print('Checking for cool things in the sky')
+
+# one time call to get location etc.
+get_location()
+while True:
     aurora()
     iss()
     sun()
@@ -98,6 +149,5 @@ def main():
     # neatclouds()
     # airplanes()
 
-if __name__ == '__main__':
-    main()
-    
+    print('sleeping')
+    time.sleep(60)
