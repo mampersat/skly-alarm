@@ -4,6 +4,11 @@ Create a device as described in https://xkcd.com/2979/
 
 ![sky alarm](https://imgs.xkcd.com/comics/sky_alarm.png)
 
+## Current State
+Basic API calls and processing working
+
+<img src="images/firstlight.png" width="400"/>
+
 ## Data Sources
 * https://ipinfo.io
 * https://worldtimeapi.org/api/timezone/{tzid}
@@ -22,11 +27,9 @@ Create a device as described in https://xkcd.com/2979/
 * [Neopixels](https://www.adafruit.com/product/2541)
 * Case : Work in Progress
 
-## Case
-<img src="images/spinning-lights.jpg" width="400" /> <br>
+## Case ideas
+<img src="images/spinning-lights.jpg" width="400"/> <br>
 <img src="images/it-crowd-the-internet.png" width="400"/> <br>
 
-
 ## Definition of Done
-
 Working prototype delivered to XKCD
