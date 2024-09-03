@@ -179,6 +179,12 @@ def sleep():
         np.write()
         time.sleep(off_duration)
 
+    # Excploding pulse from 10 to 0
+    for i in range(10, 0, -1):
+        np[0] = (40 * i, 0, 0)
+        np.write()
+        time.sleep(0.1)
+
     np[0] = (0, 10, 0)
     np.write()
 
