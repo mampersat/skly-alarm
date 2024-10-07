@@ -2,6 +2,8 @@ import requests
 import time
 
 import sys
+
+# Useful for running locally vs. on device
 if sys.platform == 'rp2':
     import wifi
     from lights import np # TODO maybe remove - this doesn't really do much
@@ -13,25 +15,52 @@ else:
 lat = 44.4689
 lon = -73.1502
 tzid = "America/New_York"
-        
-local_time = "2021-10-10T10:10:10"
+local_time = "2024-08-30T10:10:10" # overwirrten by get_location()
+dark = False # overwritten by darkness()
+
+def start_up_animation():
+    if sys.platform != 'rp2':
+        return
+
+    # Start up animation
+    for i in range(10):
+        np[i] = (10, 0, 0) # red
+        np.write()
+        time.sleep(0.1)
+
+    for i in range(10):
+        np[i] = (0, 10, 0) # green
+        np.write()
+        time.sleep(0.1)
+
+    for i in range(10):
+        np[i] = (0, 0, 10) # blue
+        np.write()
+        time.sleep(0.1)
+
+    for i in range(10):
+        np[i] = (0, 0, 0) # off
+        np.write()
+        time.sleep(0.1)
+
 
 def show_checking(position):
     if sys.platform != 'rp2':
         return
-    np[position] = (0, 0, 10)
+    np[position] = (0, 0, 10) # blue
     np.write()
 
 def show_checked(position):
     if sys.platform != 'rp2':
         return
-    np[position] = (0, 10, 0)
+    np[position] = (0, 10, 0) # green
     np.write()  
+
 
 def show_alert(position):
     if sys.platform != 'rp2':
         return
-    np[position] = (40, 0, 0)
+    np[position] = (40, 0, 0) # red
     np.write()
 
 def show_warning(position):
@@ -42,6 +71,8 @@ def show_warning(position):
 
 def get_location():
     # Get location from IP
+    print("Asking ipinfo.io for approx. location information")
+
     global lat, lon, tzid, local_time
     show_checking(0)
 
@@ -54,15 +85,22 @@ def get_location():
 
     # get current time
     response = requests.get(f"https://worldtimeapi.org/api/timezone/{tzid}")
-    local_time = response.json()    
-    print(f"time: {local_time['datetime']}")
+    local_time = response.json()['datetime']
+    print(f"time: {local_time}")
             
     show_checked(0)
     return True
 
+def sky_cover():
+    # Check for cloud cover
+    # https://api.weather.gov/points/44.4689,-73.1502
+    response = requests.get(f"https://api.weather.gov/points/{lat},{lon}")
+    forecast = response.json()['properties']['forecast']
+    sky_cover = forecast['properties']['skyCover']
+
+
 def aurora():
     # Check for northen lights
-    
     print('Checking for aurora')
     show_checking(1)
 
@@ -110,35 +148,8 @@ def iss():
     
     show_checked(2)
     print('ISS is not overhead')
+    return False
 
-
-def sun():
-    # Check for sunrise and sunset
-    # Should cache this to 24hrs
-    # More interesting if we can check atmospheric conditions like haze and cloud cover, aka "Pretty Sunsets"
-    print('Checking for sunrise and sunset')
-    show_checking(3)
-
-    try:
-        response = requests.get(f"https://api.sunrise-sunset.org/json?lat={lat}&lng={lon}&date=today&tzid={tzid}")
-        print(request)
-
-        response = requests.get(request)
-        sunrise = response.json()['results']['sunrise']
-        sunset = response.json()['results']['sunset']
-
-        print(f"Sunrise: {sunrise}")
-        print(f"Sunset: {sunset}")
-
-        sunset_window = 30 # minutes
-        if local_time > sunset - sunset_window:
-            show_alert(3)
-            return
-        
-        show_checked(3)
-    except:
-        print('Failed to get sunrise and sunset')
-        show_warning(3)
 
 def meteors():
     # Check for meteors
@@ -146,8 +157,24 @@ def meteors():
 
 
 def launches():
-    # Check for rocket launches
-    response = requests.get("https://launchlibrary.net/1.4/launch/next/5")
+    # Check for rocket launches in the next 12 hours
+
+    print('Checking for rocket launches')
+
+    ## dev API
+    response = requests.get("https://lldev.thespacedevs.com/2.2.0/launch/upcoming/")
+
+    # production API
+    # response = requests.get("https://ll.thespacedevs.com/2.2.0/launch/upcoming/")
+
+    for result in response.json()['results']:
+        window_start = result['window_start']
+        # check if in next 12 hours
+        if local_time < window_start and local_time > window_start - 12:
+            print(result['name'])
+            show_alert(4)
+            return
+
 
 
 def neatclouds():
@@ -170,7 +197,11 @@ def sleep():
         on_duration = 1.5 - (1.5 / 3600) * (i ** 2)
         off_duration = on_duration / 2  # Adjust off duration to match the speed-up
         
-        np[0] = (0, 10, 0)
+        if dark:
+            np[0] = (0, 10, 0) # green
+        else:
+            np[0] = (10, 10, 0) # yellow
+
         np.write()
         time.sleep(on_duration)
         
@@ -188,20 +219,56 @@ def sleep():
     np[0] = (0, 10, 0)
     np.write()
 
-# Main loop
+def darkness():
+    # determine phase of light, i.e. twilight, nighttime, daytime
+    # https://sunrise-sunset.org/api
 
-print('Checking for cool things in the sky')
+    global dark
 
-# one time call to get location etc.
-get_location()
-while True:
-    aurora()
-    iss()
-    sun()
-    # meteors()
-    # launches()
-    # neatclouds()
-    # airplanes()
+    url = f"https://api.sunrise-sunset.org/json?lat={lat}&lng={lon}&date=today&formatted=0"
+    print(f"Getting darkness information from {url}")
+    response = requests.get(url)
 
-    print('sleeping')
-    sleep()
+    astronnomical_twilight_begin = response.json()['results']['astronomical_twilight_begin']
+    astronnomical_twilight_end = response.json()['results']['astronomical_twilight_begin']
+
+    
+    # use the returned TIMES from the API call and today's date to do range checks
+    # TODO - date arithmetic, always fun
+    is_sun_up = response.json()['results']['sunrise'] < local_time < response.json()['results']['sunset']
+    are_we_in_astronimical_night = response.json()['results']['astronomical_twilight_begin'] < local_time < response.json()['results']['astronomical_twilight_end']
+    print(f"Local time: {local_time}")
+    print(f"Astonomical twilight begin: {response.json()['results']['astronomical_twilight_begin']}")
+    print(f"Astonomical twilight end: {response.json()['results']['astronomical_twilight_end']}")
+    print(f"Astronomical night: {are_we_in_astronimical_night}")
+
+    print(f"Sun is up: {is_sun_up}")
+    
+    dark = are_we_in_astronimical_night
+
+    print(response.json())
+    return response.json()['results']
+
+if sys.platform == 'rp2':
+    print('Running on RP2040')
+
+    print('Checking for cool things in the sky')
+
+    start_up_animation()
+
+    # one time call to get location etc.
+    get_location()
+
+    while True:
+        # todo: check for new location every 24 hours
+        # visibility()
+        darkness()
+        aurora()
+        iss()
+        # meteors()
+        # launches()
+        # neatclouds()
+        # airplanes()
+
+        print('sleeping')
+        sleep()
